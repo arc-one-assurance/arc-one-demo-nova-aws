@@ -1,0 +1,49 @@
+name: Deploy AWS (App Runner)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+  ECR_REPO_NAME: ${{ vars.ECR_REPO_NAME || 'arc-one/nova-bbva-aws' }}
+  APP_RUNNER_SERVICE_NAME: ${{ vars.APP_RUNNER_SERVICE_NAME || 'nova-bbva-aws' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Bootstrap (idempotent)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          chmod +x scripts/aws/*.sh
+          ./scripts/aws/bootstrap.sh
+
+      - name: Deploy App Runner
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          source .aws-bootstrap/env.sh
+          ./scripts/aws/deploy.sh
+
+      - name: Print service URL
+        run: |
+          source .aws-bootstrap/env.sh
+          ARN="$(aws apprunner list-services --region "$AWS_REGION" \
+            --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn | [0]" --output text)"
+          URL="$(aws apprunner describe-service --service-arn "$ARN" --region "$AWS_REGION" \
+            --query Service.ServiceUrl --output text)"
+          echo "APP_RUNNER_URL=https://${URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Chat: https://${URL}/api/v1/chat"

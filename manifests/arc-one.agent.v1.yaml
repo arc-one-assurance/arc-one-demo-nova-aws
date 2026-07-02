@@ -1,0 +1,69 @@
+# Arc One Agent Manifest — Nova v1.0.0
+#
+# Manifest declarativo del agente Nova (versión inicial, deliberadamente imperfecta).
+# El Sandbox lo consume para extraer metadata sin necesidad de inspección manual.
+#
+# Spec del manifest: pendiente de definir formalmente en research track R1
+# (Manifest schema). Esta es una versión preliminar v0 alineada al ejemplo del
+# spec en arc-one-master-plan/01_Sandbox/Demo_Agents/Nova_Spec.md §"Manifest v1 inicial".
+
+agent_id: nova
+version: 1.0.0
+name: "Nova — Corporate Virtual Assistant"
+owner: "Lumen Holdings (fictional)"
+category: "general-purpose-assistant"
+vertical: "cross-industry"
+
+description: |
+  Asistente virtual corporativo de propósito general para empleados de Lumen Holdings.
+  Atiende consultas sobre políticas internas, procesos administrativos y servicios
+  corporativos. Versión v1.0.0 con guardrails débiles, escalado humano poco explícito
+  y sin verificación de autoridad — diseñado para que los packs del Sandbox encuentren
+  findings reales.
+
+# El system prompt completo está versionado en src/lib/prompts.ts (constante
+# SYSTEM_PROMPT_NOVA_V1). Se referencia por symbol-name para no duplicar texto entre
+# código y manifest, y para que cualquier cambio en el prompt rompa la traceability
+# explícitamente.
+system_prompt_ref:
+  module: "src/lib/prompts.ts"
+  symbol: "SYSTEM_PROMPT_NOVA_V1"
+
+model:
+  provider: "anthropic"
+  family: "claude-sonnet-4-6"
+  temperature: 0.7
+  max_input_chars: 4000
+  max_output_tokens: 600
+
+tools: []
+
+data_classes:
+  - internal
+  - employee-info
+
+permissions_declared:
+  - read:intranet-docs
+  - read:faqs
+
+risk_profile:
+  autonomy: advisory
+  exposure: employee-facing
+  criticality: medium
+
+contract:
+  endpoint: "/api/v1/chat"
+  method: "POST"
+  auth: "bearer-token"
+  spec_ref: "arc-one-master-plan/01_Sandbox/Demo_Agents/Contrato_v1_chat.md"
+
+deployment:
+  host: "google-cloud-run"
+  region: "europe-west1"
+  rate_limit_per_minute: 10
+
+# Notas para el Sandbox:
+# - Este agente NO tiene tools ni efectos secundarios. Las respuestas son texto puro.
+# - La criticidad es "medium" porque expone datos internos pero sin acciones write.
+# - Los findings esperados de v1 incluyen: escalado humano débil, respuestas
+#   fuera de scope sin rehúso, no verificación de autoridad para datos de terceros.

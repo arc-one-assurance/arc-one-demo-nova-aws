@@ -1,0 +1,90 @@
+# Auto-register arc-one.agent.yaml with Arc One (BBVA PoC · ws_bbva_poc).
+#
+# Secrets (GitHub environment arc-one-registration):
+#   ARC_ONE_API_BASE_URL, ARC_ONE_BEARER_TOKEN (minteado como tecnico@bbva)
+#   APP_RUNNER_URL — host HTTPS del servicio (sin path); parchea connector en CI
+#   ARC_ONE_REGISTRATION_OWNER_USER_ID (opcional)
+
+name: Register with Arc One
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run_only:
+        description: "Solo CI Gate + dry-run (no publicar versión)"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "arc-one.agent.yaml"
+
+concurrency:
+  group: register-arc-one-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    environment: arc-one-registration
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml httpx
+
+      - name: Patch connector URL from App Runner
+        env:
+          APP_RUNNER_URL: ${{ secrets.APP_RUNNER_URL }}
+        run: |
+          if [ -n "${APP_RUNNER_URL:-}" ]; then
+            BASE="${APP_RUNNER_URL%/}"
+            sed "s|https://__APP_RUNNER_URL__/api/v1/chat|${BASE}/api/v1/chat|g" \
+              arc-one.agent.yaml > arc-one.agent.resolved.yaml
+            echo "Patched connector → ${BASE}/api/v1/chat"
+          else
+            cp arc-one.agent.yaml arc-one.agent.resolved.yaml
+            echo "APP_RUNNER_URL not set — using placeholder in manifest"
+          fi
+
+      - name: Resolve agent_id from manifest (info)
+        run: |
+          AGENT_ID=$(python - <<'PY'
+          import yaml
+          m = yaml.safe_load(open("arc-one.agent.resolved.yaml"))
+          print(m.get("agent_id") or m.get("agentId") or "")
+          PY
+          )
+          echo "Manifest agent_id: ${AGENT_ID:-<first registration>}"
+
+      - name: CI Gate — manifest drift + semver
+        env:
+          ARC_ONE_API_BASE_URL: ${{ secrets.ARC_ONE_API_BASE_URL }}
+          ARC_ONE_BEARER_TOKEN: ${{ secrets.ARC_ONE_BEARER_TOKEN }}
+          ARC_ONE_DEBUG_SUB: ${{ secrets.ARC_ONE_DEBUG_SUB }}
+          ARC_ONE_AGENT_ID: ${{ secrets.ARC_ONE_AGENT_ID }}
+        run: python scripts/ci_manifest_gate.py arc-one.agent.resolved.yaml
+
+      - name: Dry-run registration
+        env:
+          ARC_ONE_API_BASE_URL: ${{ secrets.ARC_ONE_API_BASE_URL }}
+          ARC_ONE_BEARER_TOKEN: ${{ secrets.ARC_ONE_BEARER_TOKEN }}
+          ARC_ONE_REGISTRATION_OWNER_USER_ID: ${{ secrets.ARC_ONE_REGISTRATION_OWNER_USER_ID }}
+          ARC_ONE_DEBUG_SUB: ${{ secrets.ARC_ONE_DEBUG_SUB }}
+          ARC_ONE_REGISTRATION_OUTBOUND_TOKEN: ${{ secrets.ARC_ONE_REGISTRATION_OUTBOUND_TOKEN }}
+          MOCKBANK_ASSURANCE_SHARED_TOKEN: ${{ secrets.MOCKBANK_ASSURANCE_SHARED_TOKEN }}
+        run: python scripts/register_arc_one_manifest.py arc-one.agent.resolved.yaml --dry-run
+
+      - name: Apply registration (new version)
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run_only) }}
+        env:
+          ARC_ONE_API_BASE_URL: ${{ secrets.ARC_ONE_API_BASE_URL }}
+          ARC_ONE_BEARER_TOKEN: ${{ secrets.ARC_ONE_BEARER_TOKEN }}
+          ARC_ONE_REGISTRATION_OWNER_USER_ID: ${{ secrets.ARC_ONE_REGISTRATION_OWNER_USER_ID }}
+          ARC_ONE_DEBUG_SUB: ${{ secrets.ARC_ONE_DEBUG_SUB }}
+          ARC_ONE_REGISTRATION_OUTBOUND_TOKEN: ${{ secrets.ARC_ONE_REGISTRATION_OUTBOUND_TOKEN }}
+          MOCKBANK_ASSURANCE_SHARED_TOKEN: ${{ secrets.MOCKBANK_ASSURANCE_SHARED_TOKEN }}
+        run: python scripts/register_arc_one_manifest.py arc-one.agent.resolved.yaml

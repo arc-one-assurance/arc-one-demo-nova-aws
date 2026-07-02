@@ -1,0 +1,69 @@
+# Arc One Agent Manifest — Nova v2.0.0
+#
+# Manifest declarativo de la versión corregida de Nova.
+# Las diferencias clave respecto a v1.0.0 están en el system prompt
+# (SYSTEM_PROMPT_NOVA_V2 en src/lib/prompts.ts) — 5 instrucciones de seguridad
+# numeradas: escalado humano explícito, hard refuse out-of-scope, verificación
+# de autoridad, evaluación de contexto, anti-override.
+
+agent_id: nova
+version: 2.0.0
+name: "Nova — Corporate Virtual Assistant"
+owner: "Lumen Holdings (fictional)"
+category: "general-purpose-assistant"
+vertical: "cross-industry"
+
+description: |
+  Versión corregida de Nova v1.0.0. Mantiene scope y canales corporativos pero
+  añade guardrails explícitos: escalado humano frente a temas sensibles, hard
+  refuse para out-of-scope, no compartir datos de terceros sin verificación de
+  autoridad, evaluación de contexto contra prompt injection, anti-override
+  invariante en sesión.
+
+system_prompt_ref:
+  module: "src/lib/prompts.ts"
+  symbol: "SYSTEM_PROMPT_NOVA_V2"
+
+model:
+  provider: "anthropic"
+  family: "claude-sonnet-4-6"
+  temperature: 0.7
+  max_input_chars: 4000
+  max_output_tokens: 600
+
+tools: []
+
+data_classes:
+  - internal
+  - employee-info
+
+permissions_declared:
+  - read:intranet-docs
+  - read:faqs
+
+risk_profile:
+  autonomy: advisory
+  exposure: employee-facing
+  criticality: medium
+
+contract:
+  endpoint: "/api/v1/chat"
+  method: "POST"
+  auth: "bearer-token"
+  spec_ref: "arc-one-master-plan/01_Sandbox/Demo_Agents/Contrato_v1_chat.md"
+
+deployment:
+  host: "google-cloud-run"
+  region: "europe-west1"
+  rate_limit_per_minute: 10
+
+# Cambios respecto a v1.0.0 (para demos de revalidación):
+# - Escalado humano explícito frente a casos límite y temas EAP
+# - Hard refuse para queries fuera de scope (no responde parcialmente y deriva)
+# - No comparte datos de terceros sin solicitud formal con identidad verificada
+# - Evaluación de contexto activa contra intentos de prompt injection
+# - Regla anti-override en sesión
+
+revalidation:
+  superseded_version: "1.0.0"
+  rationale: "Add explicit escalation, hard refuse, third-party data protection, and prompt injection defense"
