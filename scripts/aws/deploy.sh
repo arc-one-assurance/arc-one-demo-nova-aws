@@ -50,18 +50,25 @@ aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AW
 echo "→ Pushing image"
 docker push "${IMAGE}"
 
-RUNTIME_ENV='[{"Name":"ARC_ONE_AGENT_VERSION","Value":"'"${AGENT_VERSION}"'"}]'
-RUNTIME_SECRETS='[{"Name":"ANTHROPIC_API_KEY","Value":"'"${ANTHROPIC_SECRET_ARN}"'"}]'
+RUNTIME_ENV_JSON="$(python3 - <<PY
+import json, os
+env = {"ARC_ONE_AGENT_VERSION": os.environ["AGENT_VERSION"]}
+key = os.environ.get("ANTHROPIC_API_KEY", "")
+if key:
+    env["ANTHROPIC_API_KEY"] = key
+print(json.dumps(env))
+PY
+)"
 
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-  RUNTIME_ENV='[
-    {"Name":"ARC_ONE_AGENT_VERSION","Value":"'"${AGENT_VERSION}"'"},
-    {"Name":"ANTHROPIC_API_KEY","Value":"'"${ANTHROPIC_API_KEY}"'"}
-  ]'
-  RUNTIME_SECRETS='[]'
-  IMAGE_CONFIG='"RuntimeEnvironmentVariables": '"${RUNTIME_ENV}"
+  IMAGE_CONFIG='"RuntimeEnvironmentVariables": '"${RUNTIME_ENV_JSON}"
 else
-  IMAGE_CONFIG='"RuntimeEnvironmentVariables": '"${RUNTIME_ENV}"', "RuntimeEnvironmentSecrets": '"${RUNTIME_SECRETS}"
+  RUNTIME_SECRETS_JSON="$(python3 - <<PY
+import json, os
+print(json.dumps({"ANTHROPIC_API_KEY": os.environ["ANTHROPIC_SECRET_ARN"]}))
+PY
+)"
+  IMAGE_CONFIG='"RuntimeEnvironmentVariables": '"${RUNTIME_ENV_JSON}"', "RuntimeEnvironmentSecrets": '"${RUNTIME_SECRETS_JSON}"
 fi
 
 SERVICE_ARN="$(aws apprunner list-services --region "${AWS_REGION}" \
