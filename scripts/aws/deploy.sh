@@ -17,6 +17,12 @@ if [ -f "${ROOT}/.aws-bootstrap/env.sh" ]; then
   # shellcheck disable=SC1091
   source "${ROOT}/.aws-bootstrap/env.sh"
 fi
+if [ -f "${ROOT}/.env.aws.local" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${ROOT}/.env.aws.local"
+  set +a
+fi
 
 AWS_REGION="${AWS_REGION:-eu-west-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
@@ -25,7 +31,11 @@ ECR_URI="${ECR_URI:-${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_
 SERVICE_NAME="${APP_RUNNER_SERVICE_NAME:-nova-bbva-aws}"
 ACCESS_ROLE_ARN="${APP_RUNNER_ACCESS_ROLE_ARN:?Run scripts/aws/bootstrap.sh first}"
 INSTANCE_ROLE_ARN="${APP_RUNNER_INSTANCE_ROLE_ARN:?Run scripts/aws/bootstrap.sh first}"
-ANTHROPIC_SECRET_ARN="${ANTHROPIC_SECRET_ARN:?Run scripts/aws/bootstrap.sh first}"
+ANTHROPIC_SECRET_ARN="${ANTHROPIC_SECRET_ARN:-}"
+if [ -z "${ANTHROPIC_SECRET_ARN}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  echo "Set ANTHROPIC_API_KEY for deploy (Secrets Manager not configured)." >&2
+  exit 1
+fi
 AGENT_VERSION="${ARC_ONE_AGENT_VERSION:-1.0.0}"
 
 TAG="$(git rev-parse --short HEAD 2>/dev/null || echo local)-$(date +%Y%m%d%H%M)"

@@ -40,17 +40,19 @@ else
   echo "→ ECR repository ${ECR_REPO} already exists"
 fi
 
-# Anthropic API key in Secrets Manager
+# Anthropic API key in Secrets Manager (optional — pass ANTHROPIC_API_KEY at deploy time instead)
+SECRET_ARN=""
 if ! aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
-  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-    echo "Set ANTHROPIC_API_KEY before first bootstrap (creates Secrets Manager secret)." >&2
-    exit 1
+  if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    echo "→ Creating secret ${SECRET_NAME}..."
+    aws secretsmanager create-secret \
+      --name "${SECRET_NAME}" \
+      --secret-string "${ANTHROPIC_API_KEY}" \
+      --region "${AWS_REGION}" >/dev/null
+    SECRET_ARN="$(aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" --query ARN --output text)"
+  else
+    echo "→ Skipping Secrets Manager (pass ANTHROPIC_API_KEY at deploy time)"
   fi
-  echo "→ Creating secret ${SECRET_NAME}..."
-  aws secretsmanager create-secret \
-    --name "${SECRET_NAME}" \
-    --secret-string "${ANTHROPIC_API_KEY}" \
-    --region "${AWS_REGION}" >/dev/null
 else
   echo "→ Secret ${SECRET_NAME} already exists"
   if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
@@ -60,9 +62,8 @@ else
       --secret-string "${ANTHROPIC_API_KEY}" \
       --region "${AWS_REGION}" >/dev/null
   fi
+  SECRET_ARN="$(aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" --query ARN --output text)"
 fi
-
-SECRET_ARN="$(aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" --query ARN --output text)"
 
 # App Runner access role (pull from ECR)
 ACCESS_ROLE_NAME="${APP_RUNNER_ACCESS_ROLE:-AppRunnerECRAccessRole-nova-bbva}"
@@ -108,7 +109,7 @@ if ! aws iam get-role --role-name "${INSTANCE_ROLE_NAME}" >/dev/null 2>&1; then
   "Statement": [{
     "Effect": "Allow",
     "Action": ["secretsmanager:GetSecretValue"],
-    "Resource": "${SECRET_ARN}"
+    "Resource": "${SECRET_ARN:-*}"
   }]
 }
 EOF

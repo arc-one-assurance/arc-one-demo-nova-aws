@@ -42,6 +42,8 @@ coverage/
 # Local-only docs
 sessions/
 
+.env.aws.local
+
 # AWS bootstrap output (generated locally)
 .aws-bootstrap/
 
