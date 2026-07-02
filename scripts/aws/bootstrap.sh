@@ -45,11 +45,15 @@ SECRET_ARN=""
 if ! aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
   if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     echo "→ Creating secret ${SECRET_NAME}..."
-    aws secretsmanager create-secret \
+    if aws secretsmanager create-secret \
       --name "${SECRET_NAME}" \
       --secret-string "${ANTHROPIC_API_KEY}" \
-      --region "${AWS_REGION}" >/dev/null
-    SECRET_ARN="$(aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" --query ARN --output text)"
+      --region "${AWS_REGION}" >/dev/null 2>&1; then
+      SECRET_ARN="$(aws secretsmanager describe-secret --secret-id "${SECRET_NAME}" --region "${AWS_REGION}" --query ARN --output text)"
+    else
+      echo "→ Secrets Manager unavailable — deploy will use ANTHROPIC_API_KEY env var"
+      SECRET_ARN=""
+    fi
   else
     echo "→ Skipping Secrets Manager (pass ANTHROPIC_API_KEY at deploy time)"
   fi
