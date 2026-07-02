@@ -50,6 +50,10 @@ aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AW
 echo "→ Pushing image"
 docker push "${IMAGE}"
 
+export AGENT_VERSION
+export ANTHROPIC_SECRET_ARN="${ANTHROPIC_SECRET_ARN:-}"
+export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+
 RUNTIME_ENV_JSON="$(python3 - <<PY
 import json, os
 env = {"ARC_ONE_AGENT_VERSION": os.environ["AGENT_VERSION"]}
