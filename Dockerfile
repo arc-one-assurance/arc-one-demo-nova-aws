@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-# Multi-stage Dockerfile for Nova on AWS App Runner (same image as GCP Cloud Run).
+# Multi-stage Dockerfile for Nova on AWS ECS Fargate (same image as GCP Cloud Run).
 # Aprovecha output: "standalone" de Next.js 15 para minimizar la imagen final.
 
 # ----------------------------------------------------------------------------

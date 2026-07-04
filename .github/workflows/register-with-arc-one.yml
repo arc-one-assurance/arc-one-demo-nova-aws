@@ -2,7 +2,7 @@
 #
 # Secrets (GitHub environment arc-one-registration):
 #   ARC_ONE_API_BASE_URL, ARC_ONE_BEARER_TOKEN (minteado como tecnico@bbva)
-#   APP_RUNNER_URL — host HTTPS del servicio (sin path); parchea connector en CI
+#   AWS_SERVICE_URL — base URL del ALB (sin path); parchea connector en CI
 #   ARC_ONE_REGISTRATION_OWNER_USER_ID (opcional)
 
 name: Register with Arc One
@@ -36,18 +36,18 @@ jobs:
 
       - run: pip install pyyaml httpx
 
-      - name: Patch connector URL from App Runner
+      - name: Patch connector URL from ECS ALB
         env:
-          APP_RUNNER_URL: ${{ secrets.APP_RUNNER_URL }}
+          AWS_SERVICE_URL: ${{ secrets.AWS_SERVICE_URL }}
         run: |
-          if [ -n "${APP_RUNNER_URL:-}" ]; then
-            BASE="${APP_RUNNER_URL%/}"
-            sed "s|https://__APP_RUNNER_URL__/api/v1/chat|${BASE}/api/v1/chat|g" \
+          if [ -n "${AWS_SERVICE_URL:-}" ]; then
+            BASE="${AWS_SERVICE_URL%/}"
+            sed "s|__AWS_SERVICE_URL__/api/v1/chat|${BASE}/api/v1/chat|g" \
               arc-one.agent.yaml > arc-one.agent.resolved.yaml
             echo "Patched connector → ${BASE}/api/v1/chat"
           else
             cp arc-one.agent.yaml arc-one.agent.resolved.yaml
-            echo "APP_RUNNER_URL not set — using placeholder in manifest"
+            echo "AWS_SERVICE_URL not set — using placeholder in manifest"
           fi
 
       - name: Resolve agent_id from manifest (info)

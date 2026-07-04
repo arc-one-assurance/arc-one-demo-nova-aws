@@ -1,4 +1,4 @@
-# Arc One Agent Manifest — Nova BBVA PoC (AWS App Runner · MADRE v1.1)
+# Arc One Agent Manifest — Nova BBVA PoC (AWS ECS Fargate · MADRE v1.1)
 #
 # Workspace destino: ws_bbva_poc (registrar con token minteado por tecnico@bbva.assurance.demo)
 # Primera versión: sin agent_id — se asigna en el primer registro; luego pegarlo aquí para CI Gate.
@@ -18,7 +18,7 @@ environment:
 
 purpose: |
   Asistente bancario read-only customer-facing para PoC BBVA · consultas de saldos y movimientos
-  · NO ejecuta operaciones · supervised + HITL · desplegado en AWS App Runner (eu-west-1).
+  · NO ejecuta operaciones · supervised + HITL · desplegado en AWS ECS Fargate (eu-west-1).
 
 technical_owner: tecnico@bbva.assurance.demo
 business_owner: producto@bbva.assurance.demo
@@ -27,7 +27,7 @@ target_users:
   - customer
 customer_facing: true
 agent_origin: internal
-deployment_target: app-runner/aws
+deployment_target: ecs/fargate/aws
 regulated_context:
   - gdpr/eu
   - eu-ai-act/eu
@@ -102,8 +102,8 @@ knowledge_bases:
 
 connector:
   name: Nova BBVA AWS assurance
-  # CI/deploy reemplaza __APP_RUNNER_URL__ con la URL HTTPS del servicio App Runner.
-  endpointUrl: https://__APP_RUNNER_URL__/api/v1/chat
+  # CI/deploy reemplaza __AWS_SERVICE_URL__ con la URL del ALB (ej. http://xxx.elb.amazonaws.com).
+  endpointUrl: __AWS_SERVICE_URL__/api/v1/chat
   format: REST_JSON
   authType: NINGUNA
   promptField: input

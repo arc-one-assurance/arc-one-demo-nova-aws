@@ -1,4 +1,4 @@
-# Nova BBVA — AWS App Runner
+# Nova BBVA — AWS ECS Fargate
 
 Nova read-only bancario para la **PoC BBVA** (`ws_bbva_poc` en Arc One). Mismo contrato que Nova GCP:
 
@@ -28,18 +28,22 @@ chmod +x scripts/aws/*.sh
 ./scripts/aws/bootstrap.sh
 ```
 
-Crea: ECR, Secrets Manager, roles IAM, `.aws-bootstrap/env.sh`.
+Crea: ECR, ECS cluster, ALB, target group, security groups, roles IAM, `.aws-bootstrap/env.sh`.
+
+> **App Runner no disponible** en cuentas nuevas → usamos **ECS Fargate + ALB** (mismo Dockerfile, URL estable vía DNS del load balancer).
 
 ---
 
-## Deploy App Runner
+## Deploy ECS
 
 ```bash
 source .aws-bootstrap/env.sh
 ./scripts/aws/deploy.sh
 ```
 
-Copiá la URL que imprime (ej. `https://xxxxx.eu-west-1.awsapprunner.com/api/v1/chat`).
+Copiá la URL que imprime (ej. `http://nova-bbva-aws-xxx.eu-west-1.elb.amazonaws.com/api/v1/chat`).
+
+El ALB usa **HTTP** (sin certificado propio). Para HTTPS en producción: CloudFront delante del ALB o ACM + dominio.
 
 ---
 
@@ -48,7 +52,7 @@ Copiá la URL que imprime (ej. `https://xxxxx.eu-west-1.awsapprunner.com/api/v1/
 ```bash
 cp .env.ci.local.example .env.ci.local
 # Editar: ARC_ONE_BEARER_TOKEN=arc1_… (minteado como tecnico@)
-#         APP_RUNNER_URL=https://xxxxx.eu-west-1.awsapprunner.com
+#         AWS_SERVICE_URL=http://nova-bbva-aws-xxx.eu-west-1.elb.amazonaws.com
 
 source .env.ci.local
 ./scripts/register_version.sh --dry-run
@@ -65,9 +69,10 @@ Secrets en el repo + environment `arc-one-registration`:
 
 | Secret / var | Uso |
 |--------------|-----|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Deploy App Runner |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Deploy ECS |
 | `AWS_REGION` | `eu-west-1` |
 | `ANTHROPIC_API_KEY` | Build/deploy |
+| `AWS_SERVICE_URL` | URL base del ALB (registro Arc One) |
 | `ARC_ONE_API_BASE_URL` | `https://arc-one-sandbox.web.app` |
 | `ARC_ONE_BEARER_TOKEN` | Token `arc1_…` de `tecnico@` |
 | `ARC_ONE_REGISTRATION_OWNER_USER_ID` | Firebase UID de tecnico |
@@ -75,12 +80,14 @@ Secrets en el repo + environment `arc-one-registration`:
 - **`Deploy AWS`** — `.github/workflows/deploy-aws.yml` (manual)
 - **`Register with Arc One`** — push a `arc-one.agent.yaml` en `main`
 
+El usuario IAM `arc-one-deploy` necesita permisos sobre ECS, ECR, ELB, EC2 (SG/VPC read), IAM (roles), CloudWatch Logs.
+
 ---
 
 ## Smoke test
 
 ```bash
-curl -s -X POST 'https://YOUR-APP-RUNNER-URL/api/v1/chat' \
+curl -s -X POST 'http://YOUR-ALB-DNS/api/v1/chat' \
   -H 'Content-Type: application/json' \
   -d '{"input":"Hola, ¿podés consultar mi saldo?"}'
 ```
@@ -92,4 +99,4 @@ curl -s -X POST 'https://YOUR-APP-RUNNER-URL/api/v1/chat' \
 | Repo | Cloud | Workspace Arc One |
 |------|-------|-------------------|
 | `arc-one-demo-nova` | GCP Cloud Run | `ws_demo_bbva` (demo interna) |
-| **`arc-one-demo-nova-aws`** | **AWS App Runner** | **`ws_bbva_poc`** |
+| **`arc-one-demo-nova-aws`** | **AWS ECS Fargate** | **`ws_bbva_poc`** |

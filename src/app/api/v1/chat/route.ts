@@ -147,7 +147,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 export function GET() {
   return NextResponse.json(
     {
-      name: "Nova BBVA — AWS App Runner",
+      name: "Nova BBVA — AWS ECS",
       agent_id: "nova",
       version: AGENT_VERSION,
       contract: "arc-one /v1/chat",
