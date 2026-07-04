@@ -8,6 +8,14 @@ Nova read-only bancario para la **PoC BBVA** (`ws_bbva_poc` en Arc One).
 
 ---
 
+## Puente Arc One
+
+La validación, CI Gate y registro los mantiene **[arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools)** (`@v1.0.0`).
+
+Este repo solo tiene el manifest, el patch de connector AWS y workflows de ~15 líneas.
+
+---
+
 ## Quick links
 
 | Recurso | Link |
@@ -39,12 +47,12 @@ Nova read-only bancario para la **PoC BBVA** (`ws_bbva_poc` en Arc One).
 
 ## Workflows
 
-| Workflow | Trigger |
-|----------|---------|
-| **CI** | push / PR |
-| **Manifest PR Preview** | PR que toca manifest |
-| **Register with Arc One** | merge manifest en `main` |
-| **Deploy AWS** | manual (maintainers) |
+| Workflow | Trigger | Motor |
+|----------|---------|-------|
+| **CI** | push / PR | typecheck, lint, test, build |
+| **Manifest PR Preview** | PR manifest | [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0` |
+| **Register with Arc One** | merge manifest | idem |
+| **Deploy AWS** | manual | infra ECS (maintainers) |
 
 ---
 

@@ -73,18 +73,18 @@ Si borrás alguno de estos campos, el PR **falla antes del dry-run** con un mens
 
 **Opcionales** (podés omitir o vaciar): `required_guardrails`, `agent_skills`, `integration_endpoints`, `data_stores`, `secrets_required`, `knowledge_bases`.
 
-Validación local:
+Validación local (requiere [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0`):
 
 ```bash
-pip install pyyaml
-python scripts/validate_manifest.py arc-one.agent.yaml
+pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
+arc-one-manifest validate arc-one.agent.yaml
 ```
 
 ### Paso 3 — Abrir Pull Request
 
 En GitHub → **Compare & pull request** hacia `main`.
 
-El workflow **Manifest PR Preview** va a:
+El workflow **Manifest PR Preview** (motor: [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0`) va a:
 
 - **Validar estructura MADRE v1.1** (campos obligatorios, tipos, reglas cruzadas)
 - Validar drift vs la versión registrada en Arc One (CI Gate)
@@ -120,7 +120,7 @@ Desde Arc One, lanzá una campaña con **Pack 00** contra el conector AWS.
 Sugerencia local:
 
 ```bash
-python scripts/ci_manifest_gate.py arc-one.agent.yaml --suggest-bump
+arc-one-manifest gate arc-one.agent.yaml --suggest-bump
 ```
 
 ---
