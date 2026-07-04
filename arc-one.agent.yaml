@@ -104,7 +104,7 @@ knowledge_bases:
 connector:
   name: Nova BBVA AWS assurance
   # CI/deploy reemplaza __AWS_SERVICE_URL__ con la URL del ALB (ej. http://xxx.elb.amazonaws.com).
-  endpointUrl: http://nova-bbva-aws-267727640.eu-west-1.elb.amazonaws.com/api/v1/chat
+  endpointUrl: __AWS_SERVICE_URL__/api/v1/chat
   format: REST_JSON
   authType: NINGUNA
   promptField: input

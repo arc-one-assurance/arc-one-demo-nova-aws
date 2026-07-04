@@ -1,0 +1,167 @@
+# Preview de registro Arc One en PRs que tocan arc-one.agent.yaml.
+#
+# Flujo BBVA PoC:
+#   1. Branch → editar manifest (bump agent_version + cambio material)
+#   2. Abrir PR → este workflow valida (CI Gate + dry-run)
+#   3. Merge a main → "Register with Arc One" publica la nueva versión
+
+name: Manifest PR Preview
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "arc-one.agent.yaml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: manifest-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: CI Gate + dry-run
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: arc-one-registration
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install pyyaml httpx
+
+      - name: Read manifest metadata
+        id: meta
+        run: |
+          python - <<'PY'
+          import os, yaml
+          m = yaml.safe_load(open("arc-one.agent.yaml"))
+          agent_id = m.get("agent_id") or m.get("agentId") or ""
+          version = m.get("agent_version") or m.get("agentVersion") or "?"
+          name = m.get("name") or "?"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"agent_id={agent_id}\n")
+              f.write(f"version={version}\n")
+              f.write(f"name={name}\n")
+          PY
+
+      - name: Patch connector URL
+        env:
+          AWS_SERVICE_URL: ${{ secrets.AWS_SERVICE_URL }}
+        run: |
+          chmod +x .github/scripts/patch-manifest-connector.sh
+          .github/scripts/patch-manifest-connector.sh arc-one.agent.yaml arc-one.agent.resolved.yaml
+
+      - name: CI Gate — drift + semver
+        env:
+          ARC_ONE_API_BASE_URL: ${{ secrets.ARC_ONE_API_BASE_URL }}
+          ARC_ONE_BEARER_TOKEN: ${{ secrets.ARC_ONE_BEARER_TOKEN }}
+          ARC_ONE_AGENT_ID: ${{ secrets.ARC_ONE_AGENT_ID }}
+        run: python scripts/ci_manifest_gate.py arc-one.agent.resolved.yaml | tee gate.log
+
+      - name: Dry-run registro Arc One
+        id: dryrun
+        env:
+          ARC_ONE_API_BASE_URL: ${{ secrets.ARC_ONE_API_BASE_URL }}
+          ARC_ONE_BEARER_TOKEN: ${{ secrets.ARC_ONE_BEARER_TOKEN }}
+          ARC_ONE_REGISTRATION_OWNER_USER_ID: ${{ secrets.ARC_ONE_REGISTRATION_OWNER_USER_ID }}
+        run: |
+          python scripts/register_arc_one_manifest.py arc-one.agent.resolved.yaml --dry-run | tee dryrun.json
+
+      - name: Resumen en job summary
+        run: |
+          {
+            echo "## Manifest PR Preview — OK"
+            echo ""
+            echo "| Campo | Valor |"
+            echo "|-------|-------|"
+            echo "| Agente | ${{ steps.meta.outputs.name }} |"
+            echo "| agent_id | \`${{ steps.meta.outputs.agent_id || 'n/a' }}\` |"
+            echo "| Versión propuesta | \`${{ steps.meta.outputs.version }}\` |"
+            echo ""
+            echo "### Dry-run Arc One"
+            echo '```json'
+            cat dryrun.json
+            echo '```'
+            echo ""
+            echo "> Al **mergear** este PR, el workflow *Register with Arc One* publicará la versión en \`ws_bbva_poc\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comentario en el PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const dryrun = fs.readFileSync('dryrun.json', 'utf8');
+            const body = [
+              '## ✅ Manifest PR Preview — listo para merge',
+              '',
+              '| Campo | Valor |',
+              '|-------|-------|',
+              `| Agente | ${process.env.NAME} |`,
+              `| agent_id | \`${process.env.AGENT_ID || 'n/a'}\` |`,
+              `| Versión propuesta | \`${process.env.VERSION}\` |`,
+              '',
+              '### Dry-run (Arc One)',
+              '```json',
+              dryrun.trim(),
+              '```',
+              '',
+              '**Próximo paso:** mergeá el PR → se ejecuta *Register with Arc One* y la nueva versión aparece en [Arc One Sandbox](https://arc-one-sandbox.web.app) (workspace BBVA PoC, login `tecnico@bbva.assurance.demo`).',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+        env:
+          NAME: ${{ steps.meta.outputs.name }}
+          AGENT_ID: ${{ steps.meta.outputs.agent_id }}
+          VERSION: ${{ steps.meta.outputs.version }}
+
+  fork-note:
+    name: Fork — validación limitada
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validar YAML + semver local
+        run: |
+          python - <<'PY'
+          import re, yaml, sys
+          m = yaml.safe_load(open("arc-one.agent.yaml"))
+          v = str(m.get("agent_version") or "")
+          if not re.match(r"^\d+\.\d+\.\d+$", v):
+              sys.exit("agent_version debe ser semver (ej. 1.0.1)")
+          print(f"YAML OK · name={m.get('name')} · version={v}")
+          PY
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                '## ℹ️ PR desde fork',
+                '',
+                'Este PR viene de un fork: GitHub **no expone secrets** a workflows de forks.',
+                '',
+                'Validación local: YAML + semver OK.',
+                '',
+                'Para el **dry-run completo** contra Arc One, abrí el PR desde una rama del repo `arc-one-assurance/arc-one-demo-nova-aws` (colaborador) o pedí a un maintainer que lo haga.',
+              ].join('\n'),
+            });

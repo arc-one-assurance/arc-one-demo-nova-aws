@@ -1,102 +1,72 @@
 # Nova BBVA — AWS ECS Fargate
 
-Nova read-only bancario para la **PoC BBVA** (`ws_bbva_poc` en Arc One). Mismo contrato que Nova GCP:
+Nova read-only bancario para la **PoC BBVA** (`ws_bbva_poc` en Arc One).
 
 `POST /api/v1/chat` → `{ "input": "..." }` → `{ "output": "..." }`
 
-**No toca** `demo@bbva.assurance.demo` ni el Nova en GCP (`ws_demo_bbva`).
+**Guía hands-on para el equipo BBVA:** [`docs/GUIA_BBVA.md`](docs/GUIA_BBVA.md)
 
 ---
 
-## Prerrequisitos
+## Quick links
 
-1. **Cuenta AWS** con tarjeta ([aws.amazon.com](https://aws.amazon.com))
-2. **AWS CLI** + **Docker** en tu Mac
-3. **`ANTHROPIC_API_KEY`**
-4. En Arc One: login como `tecnico@bbva.assurance.demo` → mint token `arc1_…` (Configuración → API Keys)
+| Recurso | Link |
+|---------|------|
+| Arc One Sandbox | https://arc-one-sandbox.web.app |
+| Agente (chat AWS) | http://nova-bbva-aws-267727640.eu-west-1.elb.amazonaws.com/api/v1/chat |
+| agent_id | `arc-agent-cea1bba9` |
 
----
-
-## Setup AWS (una vez)
-
-```bash
-aws configure          # Access Key del usuario IAM
-export AWS_REGION=eu-west-1
-export ANTHROPIC_API_KEY=sk-ant-...
-
-chmod +x scripts/aws/*.sh
-./scripts/aws/bootstrap.sh
-```
-
-Crea: ECR, ECS cluster, ALB, target group, security groups, roles IAM, `.aws-bootstrap/env.sh`.
-
-> **App Runner no disponible** en cuentas nuevas → usamos **ECS Fargate + ALB** (mismo Dockerfile, URL estable vía DNS del load balancer).
+**Login PoC:** `tecnico@bbva.assurance.demo` / `BBVAPoC_2026`
 
 ---
 
-## Deploy ECS
+## Flujo PoC (manifest → nueva versión)
 
-```bash
-source .aws-bootstrap/env.sh
-./scripts/aws/deploy.sh
-```
-
-Copiá la URL que imprime (ej. `http://nova-bbva-aws-xxx.eu-west-1.elb.amazonaws.com/api/v1/chat`).
-
-El ALB usa **HTTP** (sin certificado propio). Para HTTPS en producción: CloudFront delante del ALB o ACM + dominio.
+1. Branch → editar `arc-one.agent.yaml` (bump `agent_version` + cambio material)
+2. **Pull Request** → workflow **Manifest PR Preview** (CI Gate + dry-run + comentario)
+3. **Merge** → workflow **Register with Arc One** publica la versión en `ws_bbva_poc`
+4. Verificar en Arc One UI → lanzar assurance Pack 00
 
 ---
 
-## Registro en Arc One (`ws_bbva_poc`)
+## Archivo clave: `arc-one.agent.yaml`
 
-```bash
-cp .env.ci.local.example .env.ci.local
-# Editar: ARC_ONE_BEARER_TOKEN=arc1_… (minteado como tecnico@)
-#         AWS_SERVICE_URL=http://nova-bbva-aws-xxx.eu-west-1.elb.amazonaws.com
-
-source .env.ci.local
-./scripts/register_version.sh --dry-run
-./scripts/register_version.sh
-```
-
-Tras el **primer** registro, pegá el `agent_id` que devuelve Arc One en `arc-one.agent.yaml` (para CI Gate en versiones futuras).
+- `agent_id`: `arc-agent-cea1bba9` (no cambiar)
+- `agent_version`: semver — **obligatorio bump** si cambia contenido material
+- `connector.endpointUrl`: placeholder `__AWS_SERVICE_URL__` (CI lo resuelve)
 
 ---
 
-## GitHub Actions (opcional)
+## Workflows
 
-Secrets en el repo + environment `arc-one-registration`:
-
-| Secret / var | Uso |
-|--------------|-----|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Deploy ECS |
-| `AWS_REGION` | `eu-west-1` |
-| `ANTHROPIC_API_KEY` | Build/deploy |
-| `AWS_SERVICE_URL` | URL base del ALB (registro Arc One) |
-| `ARC_ONE_API_BASE_URL` | `https://arc-one-sandbox.web.app` |
-| `ARC_ONE_BEARER_TOKEN` | Token `arc1_…` de `tecnico@` |
-| `ARC_ONE_REGISTRATION_OWNER_USER_ID` | Firebase UID de tecnico |
-
-- **`Deploy AWS`** — `.github/workflows/deploy-aws.yml` (manual)
-- **`Register with Arc One`** — push a `arc-one.agent.yaml` en `main`
-
-El usuario IAM `arc-one-deploy` necesita permisos sobre ECS, ECR, ELB, EC2 (SG/VPC read), IAM (roles), CloudWatch Logs.
+| Workflow | Trigger |
+|----------|---------|
+| **CI** | push / PR |
+| **Manifest PR Preview** | PR que toca manifest |
+| **Register with Arc One** | merge manifest en `main` |
+| **Deploy AWS** | manual (maintainers) |
 
 ---
 
 ## Smoke test
 
 ```bash
-curl -s -X POST 'http://YOUR-ALB-DNS/api/v1/chat' \
+curl -s -X POST 'http://nova-bbva-aws-267727640.eu-west-1.elb.amazonaws.com/api/v1/chat' \
   -H 'Content-Type: application/json' \
-  -d '{"input":"Hola, ¿podés consultar mi saldo?"}'
+  -d '{"input":"Hola, ¿qué podés hacer?"}'
 ```
 
 ---
 
 ## Repo hermano
 
-| Repo | Cloud | Workspace Arc One |
-|------|-------|-------------------|
-| `arc-one-demo-nova` | GCP Cloud Run | `ws_demo_bbva` (demo interna) |
-| **`arc-one-demo-nova-aws`** | **AWS ECS Fargate** | **`ws_bbva_poc`** |
+| Repo | Cloud | Workspace |
+|------|-------|-----------|
+| `arc-one-demo-nova` | GCP Cloud Run | `ws_demo_bbva` |
+| **`arc-one-demo-nova-aws`** | **AWS ECS** | **`ws_bbva_poc`** |
+
+---
+
+## Maintainers (infra AWS / secrets)
+
+Ver [`docs/CI_SETUP.md`](docs/CI_SETUP.md) · secrets en environment `arc-one-registration`.

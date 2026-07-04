@@ -79,6 +79,11 @@ def _normalize_for_drift(manifest: Dict[str, Any]) -> Dict[str, Any]:
         sp = dict(sp)
         sp["content"] = sp["content"].rstrip("\n")
         m["system_prompt"] = sp
+    con = m.get("connector")
+    if isinstance(con, dict):
+        con = dict(con)
+        con.pop("endpointUrl", None)
+        m["connector"] = con
     return m
 
 

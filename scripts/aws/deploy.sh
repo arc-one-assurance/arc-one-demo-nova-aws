@@ -59,6 +59,10 @@ docker push "${IMAGE}"
 export AGENT_VERSION
 export ANTHROPIC_SECRET_ARN="${ANTHROPIC_SECRET_ARN:-}"
 export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+# Prefer explicit deploy-time API key over Secrets Manager (evita key stale en SM).
+if [ -n "${ANTHROPIC_API_KEY}" ]; then
+  unset ANTHROPIC_SECRET_ARN
+fi
 export IMAGE
 export EXEC_ROLE_ARN
 export TASK_ROLE_ARN
@@ -84,9 +88,9 @@ container = {
     },
 }
 
-if os.environ.get("ANTHROPIC_API_KEY"):
+if os.environ.get("ANTHROPIC_API_KEY", "").strip():
     container["environment"].append(
-        {"name": "ANTHROPIC_API_KEY", "value": os.environ["ANTHROPIC_API_KEY"]}
+        {"name": "ANTHROPIC_API_KEY", "value": os.environ["ANTHROPIC_API_KEY"].strip()}
     )
 elif os.environ.get("ANTHROPIC_SECRET_ARN"):
     container["secrets"] = [
