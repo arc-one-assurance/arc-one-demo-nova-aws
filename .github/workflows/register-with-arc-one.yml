@@ -39,12 +39,18 @@ jobs:
 
       - run: pip install pyyaml httpx
 
+      - name: Validar estructura MADRE v1.1
+        run: python scripts/validate_manifest.py arc-one.agent.yaml
+
       - name: Patch connector URL
         env:
           AWS_SERVICE_URL: ${{ secrets.AWS_SERVICE_URL }}
         run: |
           chmod +x .github/scripts/patch-manifest-connector.sh
           .github/scripts/patch-manifest-connector.sh arc-one.agent.yaml arc-one.agent.resolved.yaml
+
+      - name: Validar connector resuelto
+        run: python scripts/validate_manifest.py arc-one.agent.resolved.yaml --no-placeholder
 
       - name: CI Gate — manifest drift + semver
         id: gate

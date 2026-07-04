@@ -38,6 +38,9 @@ jobs:
       - name: Install Python deps
         run: pip install pyyaml httpx
 
+      - name: Validar estructura MADRE v1.1
+        run: python scripts/validate_manifest.py arc-one.agent.yaml
+
       - name: Read manifest metadata
         id: meta
         run: |
@@ -59,6 +62,9 @@ jobs:
         run: |
           chmod +x .github/scripts/patch-manifest-connector.sh
           .github/scripts/patch-manifest-connector.sh arc-one.agent.yaml arc-one.agent.resolved.yaml
+
+      - name: Validar connector resuelto
+        run: python scripts/validate_manifest.py arc-one.agent.resolved.yaml --no-placeholder
 
       - name: CI Gate — drift + semver
         env:
@@ -138,16 +144,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pyyaml
-      - name: Validar YAML + semver local
-        run: |
-          python - <<'PY'
-          import re, yaml, sys
-          m = yaml.safe_load(open("arc-one.agent.yaml"))
-          v = str(m.get("agent_version") or "")
-          if not re.match(r"^\d+\.\d+\.\d+$", v):
-              sys.exit("agent_version debe ser semver (ej. 1.0.1)")
-          print(f"YAML OK · name={m.get('name')} · version={v}")
-          PY
+      - name: Validar estructura MADRE v1.1
+        run: python scripts/validate_manifest.py arc-one.agent.yaml
       - uses: actions/github-script@v7
         with:
           script: |
@@ -160,7 +158,7 @@ jobs:
                 '',
                 'Este PR viene de un fork: GitHub **no expone secrets** a workflows de forks.',
                 '',
-                'Validación local: YAML + semver OK.',
+                'Validación local: estructura MADRE v1.1 OK (campos obligatorios + reglas).',
                 '',
                 'Para el **dry-run completo** contra Arc One, abrí el PR desde una rama del repo `arc-one-assurance/arc-one-demo-nova-aws` (colaborador) o pedí a un maintainer que lo haga.',
               ].join('\n'),
