@@ -23,5 +23,5 @@ TMP="$(mktemp)"
 sed "s|__AWS_SERVICE_URL__/api/v1/chat|${CHAT_URL}|g" arc-one.agent.yaml > "$TMP"
 
 echo "→ Registering with connector: ${CHAT_URL}"
-python scripts/register_arc_one_manifest.py "$TMP" "$@"
+python3 scripts/register_arc_one_manifest.py "$TMP" "$@"
 rm -f "$TMP"

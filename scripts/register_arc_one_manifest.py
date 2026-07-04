@@ -449,7 +449,11 @@ def apply(
     if not isinstance(manifest, dict):
         raise SystemExit("manifest must be a YAML mapping")
     payload = manifest_to_registro_payload(manifest)
-    url = base_url.rstrip("/") + "/api/agentes/registro-completo?registrationIntent=version"
+    intent = os.environ.get("ARC_ONE_REGISTRATION_INTENT", "").strip()
+    if not intent:
+        agent_id = str(manifest.get("agent_id") or manifest.get("agentId") or "").strip()
+        intent = "version" if agent_id.startswith("arc-agent-") else "create"
+    url = base_url.rstrip("/") + f"/api/agentes/registro-completo?registrationIntent={intent}"
     if dry_run:
         url += "&dryRun=true"
     headers: Dict[str, str] = {"Content-Type": "application/json"}

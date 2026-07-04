@@ -60,8 +60,25 @@ def _load_yaml(path: str) -> Dict[str, Any]:
 def _normalize_for_drift(manifest: Dict[str, Any]) -> Dict[str, Any]:
     """Strip version-only / CI metadata before hashing."""
     m = copy.deepcopy(manifest)
-    for key in ("agent_version", "agentVersion", "revalidation", "manifest_version"):
+    for key in (
+        "agent_version",
+        "agentVersion",
+        "revalidation",
+        "manifest_version",
+        "agent_id",
+        "agentId",
+        "data_classes",
+        "data_classes_effective",
+    ):
         m.pop(key, None)
+    purpose = m.get("purpose")
+    if isinstance(purpose, str):
+        m["purpose"] = purpose.rstrip("\n")
+    sp = m.get("system_prompt")
+    if isinstance(sp, dict) and isinstance(sp.get("content"), str):
+        sp = dict(sp)
+        sp["content"] = sp["content"].rstrip("\n")
+        m["system_prompt"] = sp
     return m
 
 
