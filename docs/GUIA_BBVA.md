@@ -60,12 +60,33 @@ system_prompt:
 
 **No toques** `connector.endpointUrl` — CI lo resuelve con `__AWS_SERVICE_URL__`.
 
+### Campos obligatorios (no eliminar)
+
+Si borrás alguno de estos campos, el PR **falla antes del dry-run** con un mensaje explícito:
+
+| Bloque | Campos requeridos |
+|--------|-------------------|
+| **Identidad** | `manifest_version`, `name`, `agent_version`, `agent_type`, `environment`, `purpose` (50–500 chars), `technical_owner`, `business_owner`, `target_users`, `customer_facing`, `agent_origin`, `deployment_target`, `regulated_context`, `network_exposure` |
+| **Internal agents** | `agent_model`, `framework` (obligatorios si `agent_origin: internal`) |
+| **Comportamiento** | `system_prompt` (content 20+ chars), `declared_capabilities`, `autonomy_level`, `human_in_the_loop` |
+| **Assurance** | `connector` con `endpointUrl`, `format`, `authType` |
+
+**Opcionales** (podés omitir o vaciar): `required_guardrails`, `agent_skills`, `integration_endpoints`, `data_stores`, `secrets_required`, `knowledge_bases`.
+
+Validación local:
+
+```bash
+pip install pyyaml
+python scripts/validate_manifest.py arc-one.agent.yaml
+```
+
 ### Paso 3 — Abrir Pull Request
 
 En GitHub → **Compare & pull request** hacia `main`.
 
 El workflow **Manifest PR Preview** va a:
 
+- **Validar estructura MADRE v1.1** (campos obligatorios, tipos, reglas cruzadas)
 - Validar drift vs la versión registrada en Arc One (CI Gate)
 - Verificar que subiste `agent_version` si cambió el contenido
 - Ejecutar **dry-run** de registro
@@ -109,7 +130,7 @@ python scripts/ci_manifest_gate.py arc-one.agent.yaml --suggest-bump
 | Workflow | Cuándo | Qué hace |
 |----------|--------|----------|
 | **CI** | Cada push/PR | typecheck, lint, test, build |
-| **Manifest PR Preview** | PR que toca manifest | Gate + dry-run + comentario |
+| **Manifest PR Preview** | PR que toca manifest | Estructura MADRE + Gate + dry-run + comentario |
 | **Register with Arc One** | Merge manifest en `main` | Publica versión en Arc One |
 | **Deploy AWS** | Manual (maintainers) | Redeploy ECS Fargate |
 
