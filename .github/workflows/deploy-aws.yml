@@ -15,6 +15,9 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # ANTHROPIC_API_KEY vive en environment secrets (arc-one-registration).
+    # Repo-level AWS_* sigue en repository secrets.
+    environment: arc-one-registration
     steps:
       - uses: actions/checkout@v4
 
