@@ -23,11 +23,12 @@ source .env.ci.local
 ./scripts/register_version.sh             # publicar versión
 ```
 
-Equivalente curl (payload generado por el script Python):
+Equivalente con CLI:
 
 ```bash
-python scripts/register_arc_one_manifest.py arc-one.agent.yaml --dry-run
-# POST https://arc-one-sandbox.web.app/api/agentes/registro-completo?registrationIntent=version
+pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
+arc-one-manifest register arc-one.agent.resolved.yaml --dry-run
+# POST …/api/agentes/registro-completo?registrationIntent=version
 ```
 
 **Reglas:**
@@ -68,14 +69,15 @@ curl -X POST -H "X-ArcOne-Debug-Sub: user_demo_arc_one" \
 ## Flujo local (antes del push)
 
 ```bash
-pip install pyyaml httpx
+pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
 
 export ARC_ONE_API_BASE_URL=http://127.0.0.1:8000
 export ARC_ONE_BEARER_TOKEN=arc1_…   # o ARC_ONE_DEBUG_SUB=user_demo_arc_one en dev
 
-python scripts/ci_manifest_gate.py arc-one.agent.yaml
-python scripts/register_arc_one_manifest.py arc-one.agent.yaml --dry-run
-python scripts/register_arc_one_manifest.py arc-one.agent.yaml
+arc-one-manifest validate arc-one.agent.yaml
+arc-one-manifest gate arc-one.agent.yaml
+arc-one-manifest register arc-one.agent.yaml --dry-run
+arc-one-manifest register arc-one.agent.yaml
 ```
 
 ## Nova Cloud Run — auth outbound

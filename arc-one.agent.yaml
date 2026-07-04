@@ -4,8 +4,10 @@
 # Primera versión: sin agent_id — se asigna en el primer registro; luego pegarlo aquí para CI Gate.
 #
 # Local:
+#   pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
 #   source .env.ci.local
-#   python scripts/register_arc_one_manifest.py arc-one.agent.yaml --dry-run
+#   arc-one-manifest validate arc-one.agent.yaml
+#   ./scripts/register_version.sh --dry-run
 
 manifest_version: "1.1"
 name: Nova BBVA
