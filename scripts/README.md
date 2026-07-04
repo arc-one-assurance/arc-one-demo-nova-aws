@@ -1,9 +1,10 @@
-# Scripts — repo del agente
+# Scripts
+
+Solo infra AWS (maintainers). El puente Arc One **no** vive acá — ver [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools).
 
 | Script | Uso |
 |--------|-----|
-| `register_version.sh` | Registro local (patch connector + `arc-one-manifest register`) |
-| `aws/bootstrap.sh` | Infra ECS (maintainers) |
-| `aws/deploy.sh` | Deploy ECS (maintainers) |
+| `aws/bootstrap.sh` | Crear VPC, ECS cluster, ALB, roles (una vez) |
+| `aws/deploy.sh` | Build + deploy imagen a ECS Fargate |
 
-**Validación, CI Gate y registro en CI** → [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0` (no hay scripts Python acá).
+Registro del manifest: GitHub Actions (`Manifest PR Preview` / `Register with Arc One`).

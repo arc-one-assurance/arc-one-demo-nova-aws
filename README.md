@@ -4,15 +4,23 @@ Nova read-only bancario para la **PoC BBVA** (`ws_bbva_poc` en Arc One).
 
 `POST /api/v1/chat` → `{ "input": "..." }` → `{ "output": "..." }`
 
-**Guía hands-on para el equipo BBVA:** [`docs/GUIA_BBVA.md`](docs/GUIA_BBVA.md)
+| Doc | Para quién |
+|-----|------------|
+| [`docs/GUIA_BBVA.md`](docs/GUIA_BBVA.md) | Equipo BBVA — flujo PR → merge → nueva versión |
+| [Conectar tu repo a Arc One](https://github.com/arc-one-assurance/arc-one-manifest-tools/blob/main/docs/CONECTAR_TU_REPO.md) | Cualquier empresa — qué agregar a un repo **existente** |
+| [`docs/CI_SETUP.md`](docs/CI_SETUP.md) | Maintainers — secrets y deploy AWS |
 
 ---
 
 ## Puente Arc One
 
-La validación, CI Gate y registro los mantiene **[arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools)** (`@v1.0.0`).
+Validación, CI Gate y registro: **[arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools)** `@v1.0.1`.
 
-Este repo solo tiene el manifest, el patch de connector AWS y workflows de ~15 líneas.
+Este repo contiene solo:
+
+- `arc-one.agent.yaml` — contrato del agente
+- `.github/scripts/patch-manifest-connector.sh` — resuelve URL del ALB en CI
+- Dos workflows finos que delegan en el motor compartido
 
 ---
 
@@ -28,20 +36,11 @@ Este repo solo tiene el manifest, el patch de connector AWS y workflows de ~15 l
 
 ---
 
-## Flujo PoC (manifest → nueva versión)
+## Flujo PoC
 
 1. Branch → editar `arc-one.agent.yaml` (bump `agent_version` + cambio material)
-2. **Pull Request** → workflow **Manifest PR Preview** (CI Gate + dry-run + comentario)
-3. **Merge** → workflow **Register with Arc One** publica la versión en `ws_bbva_poc`
-4. Verificar en Arc One UI → lanzar assurance Pack 00
-
----
-
-## Archivo clave: `arc-one.agent.yaml`
-
-- `agent_id`: `arc-agent-cea1bba9` (no cambiar)
-- `agent_version`: semver — **obligatorio bump** si cambia contenido material
-- `connector.endpointUrl`: placeholder `__AWS_SERVICE_URL__` (CI lo resuelve)
+2. **Pull Request** → **Manifest PR Preview**
+3. **Merge** → **Register with Arc One** publica en `ws_bbva_poc`
 
 ---
 
@@ -50,9 +49,9 @@ Este repo solo tiene el manifest, el patch de connector AWS y workflows de ~15 l
 | Workflow | Trigger | Motor |
 |----------|---------|-------|
 | **CI** | push / PR | typecheck, lint, test, build |
-| **Manifest PR Preview** | PR manifest | [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0` |
+| **Manifest PR Preview** | PR manifest | arc-one-manifest-tools `@v1.0.1` |
 | **Register with Arc One** | merge manifest | idem |
-| **Deploy AWS** | manual | infra ECS (maintainers) |
+| **Deploy AWS** | manual | infra ECS |
 
 ---
 
@@ -72,9 +71,3 @@ curl -s -X POST 'http://nova-bbva-aws-267727640.eu-west-1.elb.amazonaws.com/api/
 |------|-------|-----------|
 | `arc-one-demo-nova` | GCP Cloud Run | `ws_demo_bbva` |
 | **`arc-one-demo-nova-aws`** | **AWS ECS** | **`ws_bbva_poc`** |
-
----
-
-## Maintainers (infra AWS / secrets)
-
-Ver [`docs/CI_SETUP.md`](docs/CI_SETUP.md) · secrets en environment `arc-one-registration`.
