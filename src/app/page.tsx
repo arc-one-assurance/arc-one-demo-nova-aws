@@ -9,13 +9,13 @@ export default function HomePage() {
           Nova
         </h1>
         <p className="text-lg text-zinc-300 mb-6">
-          Corporate Virtual Assistant. Q&amp;A interno sobre políticas, FAQs y procedimientos corporativos.
+          Asistente bancario read-only · PoC BBVA · consultas de saldos y movimientos (sin operaciones transaccionales).
         </p>
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 font-mono text-sm text-zinc-400">
           <span className="text-zinc-500">$</span> POST /api/v1/chat
         </div>
         <p className="text-xs text-zinc-500 mt-6">
-          Versión: <span className="font-mono">v1.0.0</span>
+          Manifest: <span className="font-mono">1.0.1</span>
           {" · "}
           Stack: Next.js 15 + React 19 + Anthropic SDK
         </p>

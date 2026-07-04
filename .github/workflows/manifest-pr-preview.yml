@@ -1,6 +1,6 @@
 # Preview de registro Arc One en PRs que tocan arc-one.agent.yaml.
 #
-# Lógica en arc-one-manifest-tools (pin v1.0.0) — ver docs/GUIA_BBVA.md
+# Lógica en arc-one-manifest-tools (pin v1.0.1) — ver docs/GUIA_BBVA.md
 
 name: Manifest PR Preview
 

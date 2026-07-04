@@ -1,90 +1,79 @@
-# CI / GitHub Actions — Nova → Arc One (ws_demo_atlantico)
+# CI / GitHub — Nova BBVA AWS → Arc One
 
-Registro de nuevas versiones vía push a `arc-one.agent.yaml` en `main` (workflow **Register with Arc One**).
+Documentación para **maintainers** (secrets, deploy, registro local).
 
-El manifest incluye `agent_id: arc-agent-82f173be` del export de Arc One; el CI Gate lo usa para comparar drift contra la versión registrada.
+Guía para integrar Arc One en **cualquier repo existente** (compartible):  
+[Conectar tu repo a Arc One](https://github.com/arc-one-assurance/arc-one-manifest-tools/blob/main/docs/CONECTAR_TU_REPO.md)
 
-## Prueba manual vía API (primera vez)
+Guía hands-on PoC BBVA: [`GUIA_BBVA.md`](./GUIA_BBVA.md)
 
-1. Creá token en el sandbox desplegado: login **demo analyst** → **Configuración → API Keys** → copiá `arc1_…` (solo se muestra una vez).
-2. Configurá entorno local:
+---
 
-```bash
-cp .env.ci.local.example .env.ci.local
-# editar: ARC_ONE_API_BASE_URL=https://arc-one-sandbox.web.app + ARC_ONE_BEARER_TOKEN
-```
-
-3. Ejecutá (gate → dry-run → apply):
-
-```bash
-chmod +x scripts/register_version.sh
-source .env.ci.local
-./scripts/register_version.sh --dry-run   # solo validar
-./scripts/register_version.sh             # publicar versión
-```
-
-Equivalente con CLI:
-
-```bash
-pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
-arc-one-manifest register arc-one.agent.resolved.yaml --dry-run
-# POST …/api/agentes/registro-completo?registrationIntent=version
-```
-
-**Reglas:**
-- `registrationIntent=version` — el agente ya existe (match por `name: Nova` → `nombreCanonico: nova`).
-- Si el contenido cambió respecto al export, **debe** subir `agent_version` (semver). Hoy: `1.0.0` en plataforma → `1.1.0` en repo.
-- `agent_id` en el YAML es informativo para el CI Gate; la API no lo recibe en el body.
-
-## Secrets (GitHub environment `arc-one-registration`)
+## Environment `arc-one-registration`
 
 | Secret | Descripción |
 |--------|-------------|
-| `ARC_ONE_API_BASE_URL` | URL de la API Arc One (local: `http://127.0.0.1:8000` · prod: Cloud Run sandbox API) |
-| `ARC_ONE_BEARER_TOKEN` | Token `arc1_…` del workspace **Banco Atlántico** (actor: demo analyst) |
-| `ARC_ONE_AGENT_ID` | **Opcional** · el manifest trae `agent_id: arc-agent-82f173be`; el gate lo lee del YAML |
-| `ARC_ONE_REGISTRATION_OUTBOUND_TOKEN` | Bearer hacia Nova Cloud Run (`ARC_ONE_DEMO_TOKEN` del servicio Nova) |
+| `ARC_ONE_API_BASE_URL` | `https://arc-one-sandbox.web.app` |
+| `ARC_ONE_BEARER_TOKEN` | Token `arc1_…` de `tecnico@bbva.assurance.demo` |
+| `ARC_ONE_AGENT_ID` | Opcional · YAML trae `arc-agent-cea1bba9` |
+| `ARC_ONE_REGISTRATION_OWNER_USER_ID` | UID Firebase del técnico (opcional) |
+| `AWS_SERVICE_URL` | Base URL del ALB ECS **sin** `/api/v1/chat` |
 
-`ARC_ONE_DEBUG_SUB` **no** usar contra API en modo Firebase/producción.
+También a nivel repo (deploy): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `ANTHROPIC_API_KEY`.
 
-## Crear token `arc1_…` (ya soportado en sandbox)
+---
 
-1. Login como **demo analyst** (`demo.analyst@riesgo.bancoatlantico.demo`) en el sandbox.
-2. **Configuración → API Keys → Crear token** (label p.ej. `nova-ci-github`).
-3. Copiá el valor `arc1_…` **una sola vez** → secret `ARC_ONE_BEARER_TOKEN`.
+## Crear token Arc One
 
-> **⚠️ Prod vs local:** el token vive en la **base de datos del sandbox desplegado**
-> (`ARC_ONE_API_BASE_URL`, p. ej. `https://arc-one-sandbox.web.app`). Un `arc1_…` generado
-> contra `localhost:8000` **no sirve** en GitHub Actions.
+1. Login `tecnico@bbva.assurance.demo` en [Arc One Sandbox](https://arc-one-sandbox.web.app)
+2. **Configuración → API Keys → Crear token**
+3. Copiar `arc1_…` → secret `ARC_ONE_BEARER_TOKEN` (solo se muestra una vez)
 
-Alternativa API (modo dev local):
+El token debe crearse en el sandbox desplegado (`ARC_ONE_API_BASE_URL`), no en localhost.
 
-```bash
-curl -X POST -H "X-ArcOne-Debug-Sub: user_demo_arc_one" \
-  -H "Content-Type: application/json" \
-  http://127.0.0.1:8000/api/workspace/automation-tokens \
-  -d '{"label":"nova-ci-github"}'
-```
+---
 
-## Flujo local (antes del push)
+## Registro local (debug)
 
 ```bash
-pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
+cp .env.ci.local.example .env.ci.local
+# completar ARC_ONE_* y AWS_SERVICE_URL
 
-export ARC_ONE_API_BASE_URL=http://127.0.0.1:8000
-export ARC_ONE_BEARER_TOKEN=arc1_…   # o ARC_ONE_DEBUG_SUB=user_demo_arc_one en dev
+pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.1
+source .env.ci.local
 
 arc-one-manifest validate arc-one.agent.yaml
-arc-one-manifest gate arc-one.agent.yaml
-arc-one-manifest register arc-one.agent.yaml --dry-run
-arc-one-manifest register arc-one.agent.yaml
+chmod +x .github/scripts/patch-manifest-connector.sh
+AWS_SERVICE_URL="$AWS_SERVICE_URL" .github/scripts/patch-manifest-connector.sh \
+  arc-one.agent.yaml arc-one.agent.resolved.yaml
+arc-one-manifest gate arc-one.agent.resolved.yaml
+arc-one-manifest register arc-one.agent.resolved.yaml --dry-run
+# arc-one-manifest register arc-one.agent.resolved.yaml   # publicar
 ```
 
-## Nova Cloud Run — auth outbound
+---
 
-El endpoint `/api/v1/chat` exige `Authorization: Bearer <ARC_ONE_DEMO_TOKEN>`.
+## Workflows
 
-- En **registro CI**: pasar el mismo valor en `ARC_ONE_REGISTRATION_OUTBOUND_TOKEN` (se cifra en Arc One si `ARC_ONE_FERNET_KEY` está configurado).
-- En **UI**: Configuración → API Keys → token outbound del agente Nova.
+| Workflow | Trigger |
+|----------|---------|
+| **Manifest PR Preview** | PR → `arc-one.agent.yaml` |
+| **Register with Arc One** | merge manifest en `main` |
+| **Deploy AWS** | manual |
+| **CI** | push / PR |
 
-Campos del contrato: `input` / `output` (no `prompt` / `response`).
+Motor: [arc-one-manifest-tools `@v1.0.1`](https://github.com/arc-one-assurance/arc-one-manifest-tools)
+
+---
+
+## Deploy AWS (maintainers)
+
+```bash
+# GitHub Actions → Deploy AWS (manual)
+# o local:
+source .env.aws.local
+./scripts/aws/bootstrap.sh   # primera vez
+./scripts/aws/deploy.sh
+```
+
+Tras deploy, actualizar `AWS_SERVICE_URL` en el environment si cambió el ALB.

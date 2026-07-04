@@ -2,6 +2,8 @@
 
 PoC hands-on: modificar el **manifest del agente** y ver cómo Arc One registra una **nueva versión** automáticamente.
 
+> **Integrar Arc One en otro repo existente:** [Conectar tu repo a Arc One](https://github.com/arc-one-assurance/arc-one-manifest-tools/blob/main/docs/CONECTAR_TU_REPO.md) (guía compartible, no hace falta crear repo nuevo).
+
 ---
 
 ## Accesos
@@ -73,10 +75,10 @@ Si borrás alguno de estos campos, el PR **falla antes del dry-run** con un mens
 
 **Opcionales** (podés omitir o vaciar): `required_guardrails`, `agent_skills`, `integration_endpoints`, `data_stores`, `secrets_required`, `knowledge_bases`.
 
-Validación local (requiere [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0`):
+Validación local (requiere [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.1`):
 
 ```bash
-pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.0
+pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.1
 arc-one-manifest validate arc-one.agent.yaml
 ```
 
@@ -84,7 +86,7 @@ arc-one-manifest validate arc-one.agent.yaml
 
 En GitHub → **Compare & pull request** hacia `main`.
 
-El workflow **Manifest PR Preview** (motor: [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.0`) va a:
+El workflow **Manifest PR Preview** (motor: [arc-one-manifest-tools](https://github.com/arc-one-assurance/arc-one-manifest-tools) `@v1.0.1`) va a:
 
 - **Validar estructura MADRE v1.1** (campos obligatorios, tipos, reglas cruzadas)
 - Validar drift vs la versión registrada en Arc One (CI Gate)
