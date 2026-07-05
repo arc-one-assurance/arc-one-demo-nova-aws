@@ -1,14 +1,14 @@
-# Arc One Agent Manifest — Nova BBVA PoC (AWS ECS Fargate · MADRE v1.1)
+# Arc One Agent Manifest — Nova BBVA PoC (AWS ECS Fargate · MADRE v1.2)
 #
 # Workspace destino: ws_bbva_poc (registrar con token minteado por tecnico@bbva.assurance.demo)
 # Primera versión: sin agent_id — se asigna en el primer registro; luego pegarlo aquí para CI Gate.
 #
 # Local (opcional):
-#   pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.0.1
+#   pip install git+https://github.com/arc-one-assurance/arc-one-manifest-tools@v1.1.0
 #   source .env.ci.local
 #   arc-one-manifest validate arc-one.agent.yaml
 
-manifest_version: "1.1"
+manifest_version: "1.2"
 name: Nova BBVA
 agent_id: arc-agent-cea1bba9
 agent_version: "1.0.4"
@@ -106,6 +106,9 @@ data_stores:
 
 knowledge_bases:
   - identifier: product-catalog-faq-v2
+
+# v1.2 — Nova no expone MCP en runtime; lista vacía explícita (schema adoptado).
+mcp_servers: []
 
 connector:
   name: Nova BBVA AWS assurance
