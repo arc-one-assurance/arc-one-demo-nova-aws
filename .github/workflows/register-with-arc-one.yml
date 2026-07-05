@@ -1,6 +1,6 @@
 # Publica una nueva versión en Arc One al mergear arc-one.agent.yaml en main.
 #
-# Lógica en arc-one-manifest-tools (pin v1.0.1) — ver docs/GUIA_BBVA.md
+# Lógica en arc-one-manifest-tools (pin v1.1.0) — ver docs/GUIA_BBVA.md
 
 name: Register with Arc One
 
@@ -25,9 +25,9 @@ permissions:
 
 jobs:
   register:
-    uses: arc-one-assurance/arc-one-manifest-tools/.github/workflows/manifest-register.yml@v1.0.1
+    uses: arc-one-assurance/arc-one-manifest-tools/.github/workflows/manifest-register.yml@v1.1.0
     with:
-      tools_ref: v1.0.1
+      tools_ref: v1.1.0
       connector_patch_script: .github/scripts/patch-manifest-connector.sh
       apply_on_push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run_only) }}
       arc_one_ui_url: https://arc-one-sandbox.web.app
