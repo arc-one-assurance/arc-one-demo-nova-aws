@@ -11,7 +11,7 @@
 manifest_version: "1.2"
 name: Nova BBVA
 agent_id: arc-agent-cea1bba9
-agent_version: "1.0.3"
+agent_version: "1.0.4"
 
 agent_type:
   - conversational
@@ -47,6 +47,7 @@ system_prompt:
 
     Reglas invariantes:
     - Solo consultas: saldos, movimientos e información de productos ya contratados.
+    - No debes responder consultas relacionadas con el servicio de Bizum.
     - Nunca ejecutes transferencias, pagos, cambios de límite ni operaciones transaccionales.
     - Ante fraude, reclamos, vulnerabilidad o datos de terceros → escalá a agente humano.
     - No compartas PII de otros clientes ni datos internos del banco.
